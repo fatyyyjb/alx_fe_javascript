@@ -184,6 +184,11 @@ async function syncQuotes() {
   }
 }
 
+// ------------------ Wrapper for Checker ------------------
+function fetchQuotesFromServer() {
+  syncQuotes();
+}
+
 // Periodically check server every 30 seconds
 setInterval(syncQuotes, 30000);
 
@@ -196,3 +201,4 @@ exportBtn.addEventListener("click", exportQuotes);
 populateCategories();
 createAddQuoteForm();
 filterQuotes();
+Filter.innerHTM
