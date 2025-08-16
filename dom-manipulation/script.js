@@ -111,6 +111,20 @@ function addQuote(text, category) {
   populateCategories();
   filterQuotes();
   alert("Quote added successfully!");
+
+  // ------------------ POST to server ------------------
+  fetch(serverUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(newQuote)
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log("Quote sent to server:", data);
+  })
+  .catch(err => console.error("Error posting quote:", err));
 }
 
 // ------------------ JSON Import/Export ------------------
@@ -129,7 +143,6 @@ function importFromJsonFile(event) {
   fileReader.onload = function(e) {
     try {
       const importedQuotes = JSON.parse(e.target.result);
-      // Assign unique ids if missing
       importedQuotes.forEach(q => {
         if (!q.id) q.id = Date.now() + Math.floor(Math.random() * 1000);
       });
@@ -155,7 +168,6 @@ async function fetchQuotesFromServer() {
     serverQuotes.forEach(sq => {
       const exists = quotes.find(lq => lq.id === sq.id);
       if (!exists) {
-        // Server quote not in local → add it
         quotes.push({ id: sq.id, text: sq.title || sq.text, category: sq.category || "Uncategorized" });
         updated = true;
       }
