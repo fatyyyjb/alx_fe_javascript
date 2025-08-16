@@ -42,4 +42,146 @@ function showRandomQuote() {
   const selectedCategory = categoryFilter.value;
   const filteredQuotes = selectedCategory === "all" 
     ? quotes 
-    : quotes.filter(q => q.category === selectedCate
+    : quotes.filter(q => q.category === selectedCategory);
+
+  if (filteredQuotes.length === 0) {
+    quoteDisplay.textContent = "No quotes available for this category.";
+    return;
+  }
+
+  const randomIndex = Math.floor(Math.random() * filteredQuotes.length);
+  const randomQuote = filteredQuotes[randomIndex];
+  quoteDisplay.textContent = `"${randomQuote.text}" — ${randomQuote.category}`;
+
+  // Save last viewed quote in sessionStorage
+  sessionStorage.setItem("lastQuoteIndex", randomIndex);
+}
+
+function filterQuotes() {
+  const selectedCategory = categoryFilter.value;
+  localStorage.setItem("lastCategory", selectedCategory);
+  showRandomQuote();
+}
+
+// ------------------ Add Quote Form ------------------
+function createAddQuoteForm() {
+  const formDiv = document.createElement("div");
+  formDiv.style.marginTop = "20px";
+
+  const quoteInput = document.createElement("input");
+  quoteInput.id = "newQuoteText";
+  quoteInput.type = "text";
+  quoteInput.placeholder = "Enter a new quote";
+
+  const categoryInput = document.createElement("input");
+  categoryInput.id = "newQuoteCategory";
+  categoryInput.type = "text";
+  categoryInput.placeholder = "Enter quote category";
+
+  const addBtn = document.createElement("button");
+  addBtn.textContent = "Add Quote";
+
+  formDiv.appendChild(quoteInput);
+  formDiv.appendChild(categoryInput);
+  formDiv.appendChild(addBtn);
+
+  document.body.appendChild(formDiv);
+
+  addBtn.addEventListener("click", () => {
+    const text = quoteInput.value.trim();
+    const category = categoryInput.value.trim();
+    if (text && category) {
+      addQuote(text, category);
+      quoteInput.value = "";
+      categoryInput.value = "";
+    } else {
+      alert("Please fill in both fields!");
+    }
+  });
+}
+
+function addQuote(text, category) {
+  const newQuote = {
+    id: Date.now(), // unique id
+    text,
+    category
+  };
+  quotes.push(newQuote);
+  saveQuotes();
+  populateCategories();
+  filterQuotes();
+  alert("Quote added successfully!");
+}
+
+// ------------------ JSON Import/Export ------------------
+function exportQuotes() {
+  const blob = new Blob([JSON.stringify(quotes, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "quotes.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importFromJsonFile(event) {
+  const fileReader = new FileReader();
+  fileReader.onload = function(e) {
+    try {
+      const importedQuotes = JSON.parse(e.target.result);
+      // Assign unique ids if missing
+      importedQuotes.forEach(q => {
+        if (!q.id) q.id = Date.now() + Math.floor(Math.random() * 1000);
+      });
+      quotes.push(...importedQuotes);
+      saveQuotes();
+      populateCategories();
+      filterQuotes();
+      alert("Quotes imported successfully!");
+    } catch (err) {
+      alert("Invalid JSON file.");
+    }
+  };
+  fileReader.readAsText(event.target.files[0]);
+}
+
+// ------------------ Server Sync & Conflict Resolution ------------------
+async function fetchQuotesFromServer() {
+  try {
+    const response = await fetch(serverUrl);
+    const serverQuotes = await response.json();
+
+    let updated = false;
+    serverQuotes.forEach(sq => {
+      const exists = quotes.find(lq => lq.id === sq.id);
+      if (!exists) {
+        // Server quote not in local → add it
+        quotes.push({ id: sq.id, text: sq.title || sq.text, category: sq.category || "Uncategorized" });
+        updated = true;
+      }
+    });
+
+    if (updated) {
+      saveQuotes();
+      populateCategories();
+      filterQuotes();
+      alert("Quotes updated from server!");
+    }
+
+  } catch (err) {
+    console.error("Error fetching quotes from server:", err);
+  }
+}
+
+// Run sync every 30 seconds
+setInterval(fetchQuotesFromServer, 30000);
+
+// ------------------ Event Listeners ------------------
+newQuoteBtn.addEventListener("click", showRandomQuote);
+importFileInput.addEventListener("change", importFromJsonFile);
+exportBtn.addEventListener("click", exportQuotes);
+
+// ------------------ Initialize App ------------------
+populateCategories();
+createAddQuoteForm();
+filterQuotes(); // show quote from last selected category
