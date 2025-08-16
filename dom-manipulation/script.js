@@ -32,7 +32,6 @@ function populateCategories() {
     categoryFilter.appendChild(option);
   });
 
-  // Restore last selected category
   const lastCategory = localStorage.getItem("lastCategory") || "all";
   categoryFilter.value = lastCategory;
 }
@@ -52,8 +51,6 @@ function showRandomQuote() {
   const randomIndex = Math.floor(Math.random() * filteredQuotes.length);
   const randomQuote = filteredQuotes[randomIndex];
   quoteDisplay.textContent = `"${randomQuote.text}" — ${randomQuote.category}`;
-
-  // Save last viewed quote in sessionStorage
   sessionStorage.setItem("lastQuoteIndex", randomIndex);
 }
 
@@ -84,7 +81,6 @@ function createAddQuoteForm() {
   formDiv.appendChild(quoteInput);
   formDiv.appendChild(categoryInput);
   formDiv.appendChild(addBtn);
-
   document.body.appendChild(formDiv);
 
   addBtn.addEventListener("click", () => {
@@ -102,7 +98,7 @@ function createAddQuoteForm() {
 
 function addQuote(text, category) {
   const newQuote = {
-    id: Date.now(), // unique id
+    id: Date.now(),
     text,
     category
   };
@@ -158,17 +154,20 @@ function importFromJsonFile(event) {
   fileReader.readAsText(event.target.files[0]);
 }
 
-// ------------------ Server Sync & Conflict Resolution ------------------
-async function fetchQuotesFromServer() {
+// ------------------ Sync with Server ------------------
+async function syncQuotes() {
   try {
     const response = await fetch(serverUrl);
     const serverQuotes = await response.json();
 
     let updated = false;
     serverQuotes.forEach(sq => {
-      const exists = quotes.find(lq => lq.id === sq.id);
-      if (!exists) {
+      const localQuote = quotes.find(lq => lq.id === sq.id);
+      if (!localQuote) {
         quotes.push({ id: sq.id, text: sq.title || sq.text, category: sq.category || "Uncategorized" });
+        updated = true;
+      } else if (localQuote.text !== (sq.title || sq.text)) {
+        localQuote.text = sq.title || sq.text; // server wins conflict
         updated = true;
       }
     });
@@ -177,16 +176,16 @@ async function fetchQuotesFromServer() {
       saveQuotes();
       populateCategories();
       filterQuotes();
-      alert("Quotes updated from server!");
+      alert("Local quotes updated from server! Conflicts resolved.");
     }
 
   } catch (err) {
-    console.error("Error fetching quotes from server:", err);
+    console.error("Error syncing quotes:", err);
   }
 }
 
-// Run sync every 30 seconds
-setInterval(fetchQuotesFromServer, 30000);
+// Periodically check server every 30 seconds
+setInterval(syncQuotes, 30000);
 
 // ------------------ Event Listeners ------------------
 newQuoteBtn.addEventListener("click", showRandomQuote);
@@ -196,4 +195,4 @@ exportBtn.addEventListener("click", exportQuotes);
 // ------------------ Initialize App ------------------
 populateCategories();
 createAddQuoteForm();
-filterQuotes(); // show quote from last selected category
+filterQuotes();
