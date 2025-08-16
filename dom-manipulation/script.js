@@ -172,12 +172,13 @@ async function syncQuotes() {
       }
     });
 
-    if (updated) {
-      saveQuotes();
-      populateCategories();
-      filterQuotes();
-      alert("Local quotes updated from server! Conflicts resolved.");
-    }
+      if (updated) {
+        saveQuotes();
+        populateCategories();
+        filterQuotes();
+        alert("Quotes synced with server!");
+      }
+
 
   } catch (err) {
     console.error("Error syncing quotes:", err);
